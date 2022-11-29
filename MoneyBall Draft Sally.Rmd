@@ -1,0 +1,214 @@
+---
+title: "MoneyBall Draft"
+author: "Sally Krüger"
+date: "2022-11-24"
+output: html_document
+
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(ggplot2)
+library(kableExtra)
+```
+
+# Oakland Athletics {.tabset}
+<style>
+      a {
+        color: #ff4d00;
+      }
+</style>
+
+## Presentation
+
+![](https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Ftse1.mm.bing.net%2Fth%3Fid%3DOIP.mF7GhRg_wtE-eu10VVNEMAHaHa%26pid%3DApi&f=1&ipt=e0e900452358addb5a6001ec9f68ed3466745206539a1cb27fec157597b79e3f&ipo=images)
+
+```{r loading_data, echo=FALSE, position='left'}
+# install.packages("Lahman")
+library(Lahman)
+
+data(LahmanData)
+
+head(LahmanData)
+
+data(Teams)
+
+oakland <- Teams %>% 
+                filter(name == "Oakland Athletics")
+
+oakland
+
+oak_ranking <- oakland %>% 
+                  select(yearID, Rank)
+
+# https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
+
+oak_ranking
+
+oak_ranking %>% 
+  kbl() %>%
+  kable_styling("striped", full_width = F, position="left")
+ # cell_spec(oak_ranking$Rank, background = ifelse(oak_ranking$Rank ==5, "red", "blue"))
+
+
+```
+
+```{r fig.align="right", echo=FALSE}
+oakland <- Teams %>% 
+                filter(name == "Oakland Athletics")
+
+oak_ranking <- oakland %>% 
+                  select(yearID, Rank)
+
+rank_plot <- ggplot(oak_ranking, aes(yearID, Rank))+
+  geom_point(color=ifelse(oak_ranking$Rank<2, "orange", "black"))+
+  geom_line(color="dark green")+
+  geom_hline(yintercept = 4.5, linetype = "dashed", color="red")+
+  geom_hline(yintercept = 2.5, linetype = "dashed", color="green")+
+  scale_y_reverse()+
+  labs(
+    title = "Oakland Athletics",
+    subtitle = "Ranking: 1968 - 2018",
+    caption = "Data from Lahman Dataset", 
+    y = "Ranking", 
+    x = "Year"
+  )
+
+rank_plot
+```
+
+
+## League
+
+[Okland Athletics](https://www.mlb.com/athletics)
+
+```{r}
+franchise <- Teams %>% 
+                filter(yearID==2021) %>% 
+                select(franchID, franchName = name) %>% 
+                arrange(franchID)
+
+franchise %>% 
+  kbl() %>% 
+  kable_styling("striped")
+```
+
+
+
+## Fielding 2001 vs 2002
+
+Comparison of the players that played in 2001 vs 2002
+
+### Top players 2001 (number of games played)
+
+```{r}
+data(Fielding)
+
+Fielding_Players  <- left_join(Fielding, People, by="playerID")
+
+Fielding_Players %>% 
+  select(nameLast, nameFirst, playerID, yearID, stint, teamID, lgID, POS, G, GS, InnOuts) %>% 
+  filter(yearID==2001, teamID=="OAK") %>% 
+  arrange(desc(G)) %>% 
+  head(n=6)
+```
+
+- 
+
+### 6 Top players from 2001 that did not play in 2002
+```{r}
+played_2002 <- Fielding_Players %>% 
+  filter(yearID==2002, teamID=="OAK") %>% 
+  select(playerID)
+
+played_2002$playerID 
+
+
+Fielding_Players %>% 
+  select(nameLast, nameFirst, playerID, yearID, stint, teamID, lgID, POS, G, GS, InnOuts) %>% 
+  filter(yearID==2001, teamID=="OAK") %>% 
+  filter(!playerID %in% played_2002$playerID) %>% 
+  arrange(desc(G)) %>% 
+  head(n=6)
+```
+
+
+https://www.nytimes.com/2001/12/05/sports/baseball-giambi-to-join-yanks-barring-bid-by-the-a-s.html
+
+
+## Run differential
+
+[The run differential break down](https://joeposnanski.substack.com/p/the-run-differential-breakdown)
+
+[Pythagorean Theorem of Baseball](https://www.baseball-reference.com/bullpen/Pythagorean_Theorem_of_Baseball)
+
+
+```{r}
+# install.packages("vembedr")
+library(vembedr)
+embed_url("https://youtu.be/Tzin1DgexlE")
+```
+
+Video: (https://youtu.be/Tzin1DgexlE)
+
+???
+
+```{r}
+stats <- Teams %>% 
+  filter(yearID==2001)%>% 
+  select(teamID, G, W, L, R, RA) %>% 
+  mutate('W-L'= (W-L), 'W%' = paste0(round(W/G*100,1),"%"), 'R-RA'=R-RA, 'Est.W%'=paste0(round(R^2/(R^2+RA^2)*100,1),"%"), 'Revised Est.W%'=paste0(round(R^2/(R^2+RA^2)*100,1),"%")) %>% 
+  arrange(teamID)
+
+stats
+  
+```
+
+```{r warning=FALSE, message=FALSE}
+stats2 <- Teams %>% 
+  filter(yearID==2001)%>% 
+  select(teamID, G, W, L, R, RA) %>% 
+  mutate('W-L'= (W-L), 'W%' = round(W/G*100,1), 'R-RA'=R-RA, 'Est.W%'=paste0(round(R^2/(R^2+RA^2)*100,1),"%"), 'Revised Est.W%'=paste0(round(R^2/(R^2+RA^2)*100,1),"%")) %>% 
+  arrange(teamID)
+
+ggplot(stats2, aes(`R-RA`, `W%`))+
+  geom_point()+
+  geom_smooth(method="lm", se=FALSE)+
+  theme(
+    plot.background= element_rect('#D5E4EB'),
+    panel.background = element_rect('#D5E4EB'),
+    panel.grid.major.x=element_blank(),
+    panel.grid.minor.x=element_blank(),
+    panel.grid.major.y=element_line(linewidth=1),
+    panel.grid.minor.y = element_blank(),
+    axis.line.x = element_line(),
+    axis.ticks.length=unit(-0.1, "cm"),
+    axis.ticks.y = element_blank()
+  )+
+  labs(
+    title='Wins percentage according to Runs scored compared to Runs Allowed'
+  )
+
+```
+
+
+
+
+## Runs Created
+
+![](https://external-content.duckduckgo.com/iu/?u=http%3A%2F%2Fwww.dvdizzy.com%2Fimages%2Fm%2Fmoneyball-03.jpg&f=1&nofb=1&ipt=3bce742b59ef505724631da1d1eeb287538a3930e3a2d35b9e1645784ca5df31&ipo=images)
+
+
+
+Exercise
+
+Using de differents versions of the formula from wikipedia:
+[Runs created on Wikipedia](https://en.wikipedia.org/wiki/Runs_created)
+calculate the “Runs Created” for 2001 (all players) [Usefull link: Stats in baseball
+other ideas](https://en.wikipedia.org/wiki/Baseball_statistics)
+
+See also (https://www.retrosheet.org/Research/SawyerB/THE%20LEAD%20OFF%20FORMULA.pdf) do liner regression plot w-l vs runs Export data from https://www.baseball-reference.com/boxes/OAK/OAK201604040.shtml
+
+Football https://www.footballscience.net/special-topics/performance-analysis/
